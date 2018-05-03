@@ -3,14 +3,11 @@ USE FitnessFreak;
 SET sql_notes = 0;
 
 DROP TABLE IF EXISTS FoodLogDetails;
-DROP TABLE IF EXISTS DieticianVerification;
-DROP TABLE IF EXISTS TypeOfFood;
-DROP TABLE IF EXISTS DietChart;
-DROP TABLE IF EXISTS ExerciseChart;
+DROP TABLE IF EXISTS UserDietChart;
+DROP TABLE IF EXISTS UserExerciseChart;
 DROP TABLE IF EXISTS ExerciseDailyActivity;
-DROP TABLE IF EXISTS Meal;
+DROP TABLE IF EXISTS DietChart;
 DROP TABLE IF EXISTS Dietician;
-DROP TABLE IF EXISTS FoodType;
 DROP TABLE IF EXISTS Food;
 DROP TABLE IF EXISTS Exercise;
 DROP TABLE IF EXISTS Trainer;
@@ -38,9 +35,13 @@ CREATE TABLE User
   Country 						VARCHAR(50) 					NOT NULL,
   ZipCode 						INT 										NOT NULL,
   EmailAddress 				VARCHAR(50) 					NOT NULL,
+  GoalWeight					FLOAT									NOT NULL,
   UserType 						VARCHAR(50) 					NOT NULL,
   UserID 							INT	AUTO_INCREMENT   NOT NULL ,
   Tier			 					VARCHAR(50) 					NOT NULL,
+  DailyCalorieLimit			FLOAT									NOT NULL,
+  DaysToAchieveGoal		INT										NOT NULL,
+  UserRole						VARCHAR(50)					NOT NULL,
   PRIMARY KEY (UserID),
   UNIQUE (EmailAddress)
 );
@@ -78,8 +79,8 @@ CREATE TABLE OffersApplicableTo
   OfferID 						INT 						NOT NULL,
   UserID 						INT 						NOT NULL,
   PRIMARY KEY (OfferID, UserID),
-  FOREIGN KEY (OfferID) REFERENCES Offers(OfferID),
-  FOREIGN KEY (UserID) REFERENCES User(UserID)
+   FOREIGN KEY (OfferID) REFERENCES Offers(OfferID),
+   FOREIGN KEY (UserID) REFERENCES User(UserID)
 );
 
 
@@ -90,7 +91,9 @@ CREATE TABLE Trainer
   FirstName 				Varchar(50) 								NOT NULL,
   MiddleName 				Varchar(50) 								NULL,
   LastName 					Varchar(50) 								NOT NULL,
-  PRIMARY KEY (TrainerID)
+  EmailAddress 			VARCHAR(50) 						NOT NULL,
+  PRIMARY KEY (TrainerID),
+UNIQUE (EmailAddress)
 );
 
 
@@ -115,19 +118,11 @@ CREATE TABLE Food
   FoodID 							INT 		AUTO_INCREMENT 		NOT NULL,
   FoodName 					Varchar(50) 								NOT NULL,
   Calories 						Float 											NOT NULL,
+  Quantity							FLOAT											NOT NULL,
   UnitOfMeasurement 		Varchar(50) 								NOT NULL,
+  FoodType						VARCHAR(500)							NOT NULL,
   PRIMARY KEY (FoodID),
   UNIQUE (FoodName)
-);
-
-
-
-CREATE TABLE FoodType
-(
-  Type 							Varchar(100)									 		NOT NULL,
-  FoodTypeID 				INT 						AUTO_INCREMENT 	NOT NULL,
-  PRIMARY KEY (FoodTypeID),
-  UNIQUE (Type)
 );
 
 
@@ -139,18 +134,22 @@ CREATE TABLE Dietician
   Position 				Varchar(50)   											  NULL,
   MiddleName 			Varchar(50)  											  NULL,
   LastName 				Varchar(50)  											  NOT NULL,
+  EmailAddress		VARCHAR(50)										  NOT NULL,
+ UNIQUE (EmailAddress),
   PRIMARY KEY (DieticianID)
 );
 
 
-
-CREATE TABLE Meal
+CREATE TABLE DietChart
 (
-  Type 						Varchar(50)												 NOT NULL,
-  MealTypeID 			INT 			AUTO_INCREMENT				 NOT NULL,
-  PRIMARY KEY (MealTypeID),
-  UNIQUE (Type)
+  DietChartID 				INT  				AUTO_INCREMENT			  NOT NULL,
+  Description     			Varchar(1000) 											  NOT NULL,
+  DieticianID 				INT																   NOT NULL,
+  CaloriesPerChart		float																   NOT NULL,
+  FOREIGN KEY (DieticianID) REFERENCES Dietician(DieticianID),
+  PRIMARY KEY (DietChartID)
 );
+
 
 
 
@@ -161,6 +160,7 @@ CREATE TABLE ExerciseDailyActivity
   WorkoutDurationInMinutes 			INT 																NOT NULL,
   UserID 											INT 																NOT NULL,
   ExerciseID 									INT																NOT NULL,
+  CaloriesBurned								FLOAT															NOT NULL,
   PRIMARY KEY (ActivityID),
   FOREIGN KEY (UserID) REFERENCES User(UserID),
   FOREIGN KEY (ExerciseID) REFERENCES Exercise(ExerciseID)
@@ -168,7 +168,7 @@ CREATE TABLE ExerciseDailyActivity
 
 
 
-CREATE TABLE ExerciseChart
+CREATE TABLE UserExerciseChart
 (
   IsActive 										Bool 									NOT NULL,
   DateRecommended 						DateTime 							NOT NULL,
@@ -182,38 +182,15 @@ CREATE TABLE ExerciseChart
 
 
 
-CREATE TABLE DietChart
+CREATE TABLE UserDietChart
 (
-  PortionOfFood 								Float 									NOT NULL,
+  PortionOfFood 								VARCHAR(1000) 				NOT NULL,
   DateRecommended 						DateTime 							NOT NULL,
   IsActive 										Bool 									NOT NULL,
-  DietChartID 									INT AUTO_INCREMENT	NOT NULL,
+  UserDietChartID 							INT AUTO_INCREMENT	NOT NULL,
   UserID 											INT										NOT NULL,
-  FoodID 											INT										NOT NULL,
-  PRIMARY KEY (DietChartID),
-  FOREIGN KEY (UserID) REFERENCES User(UserID),
-  FOREIGN KEY (FoodID) REFERENCES Food(FoodID)
-);
-
-
-
-CREATE TABLE TypeOfFood
-(
-  FoodTypeID 				INT 			AUTO_INCREMENT				NOT NULL,
-  FoodID 						INT															NOT NULL,
-  PRIMARY KEY (FoodTypeID, FoodID),
-  FOREIGN KEY (FoodTypeID) REFERENCES FoodType(FoodTypeID),
-  FOREIGN KEY (FoodID) REFERENCES Food(FoodID)
-);
-
-
-CREATE TABLE DieticianVerification
-(
-  DieticianID 				INT 			NOT NULL,
-  FoodID 						INT 			NOT NULL,
-  PRIMARY KEY (DieticianID, FoodID),
-  FOREIGN KEY (DieticianID) REFERENCES Dietician(DieticianID),
-  FOREIGN KEY (FoodID) REFERENCES Food(FoodID)
+  PRIMARY KEY (UserDietChartID),
+  FOREIGN KEY (UserID) REFERENCES User(UserID)
 );
 
 
@@ -223,11 +200,12 @@ CREATE TABLE FoodLogDetails
   FoodLogID 				 INT 		AUTO_INCREMENT	NOT NULL,
   Quantity 					 Float	 										NOT NULL,
   DateOfConsumption  DateTime 									NOT NULL,
-  MealTypeID 				 INT 											NOT NULL,
+  MealType	 				 VARCHAR(10) 							NOT NULL,
   UserID 						 INT 											NOT NULL,
   FoodID 						 INT 											NOT NULL,
+  CaloriesConsumed	 float											NOT NULL,
+  RemainingCalories	 FLOAT										NOT NULL,
   PRIMARY KEY (FoodLogID),
-  FOREIGN KEY (MealTypeID) REFERENCES Meal(MealTypeID),
   FOREIGN KEY (UserID) REFERENCES User(UserID),
   FOREIGN KEY (FoodID) REFERENCES Food(FoodID)
 );
